@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Exámenes - Historia del Arte (Guía)</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#071021; --accent1:#8b5cf6; --accent2:#06b6d4;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg),#071021);color:#e6eef8;display:flex;align-items:stretch}
+    .sidebar{width:320px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);backdrop-filter: blur(6px);padding:24px;border-right:1px solid rgba(255,255,255,0.03)}
+    .brand{font-weight:700;font-size:20px;display:flex;align-items:center;gap:12px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent1),var(--accent2));box-shadow:0 6px 18px rgba(11,20,32,0.6);display:flex;align-items:center;justify-content:center;font-weight:800}
+    .units{margin-top:20px;display:grid;gap:10px}
+    .unit-btn{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:12px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:transform .15s, box-shadow .15s}
+    .unit-btn:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(11,20,32,0.6)}
+    .content{flex:1;padding:28px;display:flex;flex-direction:column;gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:20px;border-radius:16px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+    .exam-title{display:flex;align-items:center;gap:14px}
+    .exam-title h2{margin:0}
+    .question{font-size:18px;margin:12px 0}
+    .choices{display:grid;gap:10px}
+    .choice{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);cursor:pointer;display:flex;align-items:flex-start;gap:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+    .choice small{display:block;opacity:0.85;font-size:13px}
+    .choice.selected{outline:3px solid rgba(139,92,246,0.18);transform:translateY(-2px)}
+    .controls{display:flex;gap:10px;align-items:center}
+    .btn{background:linear-gradient(90deg,var(--accent1),var(--accent2));padding:10px 14px;border-radius:10px;border:none;color:#021024;font-weight:700;cursor:pointer}
+    .muted{opacity:0.8;font-size:14px}
+    .progress{height:10px;background:rgba(255,255,255,0.04);border-radius:999px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent1),var(--accent2));width:0%}
+    .result{font-size:20px;font-weight:700}
+    footer{margin-top:auto;text-align:center;opacity:0.7;font-size:13px}
+    @media (max-width:1000px){
+      .sidebar{display:none} .content{padding:16px}
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar card">
+    <div class="brand"><div class="logo">HA</div>Guía - Exámenes</div>
+    <p class="muted">Selecciona una unidad para comenzar su examen. Preguntas basadas literalmente en la GUÍA-HA.pdf (convertidas a opción múltiple explicativa).</p>
+    <div class="units" id="units"></div>
+    <div style="margin-top:18px" class="muted"></div>
+  </aside>
+  <main class="content">
+    <div class="card">
+      <div class="exam-title">
+        <h2 id="unit-title">Selecciona una unidad</h2>
+        <div style="margin-left:auto" class="muted" id="qcount"></div>
+      </div>
+      <div style="margin-top:8px" class="progress"><i id="prog"></i></div>
+    </div>
+
+    <div id="exam-area" class="card" style="min-height:260px;display:none;flex-direction:column">
+      <div class="muted" id="qnum"></div>
+      <div class="question" id="question-text"></div>
+      <div class="choices" id="choices"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+        <div class="controls">
+          <button class="btn" id="prev">Anterior</button>
+          <button class="btn" id="next">Siguiente</button>
+          <button class="btn" id="submit">Entregar</button>
+        </div>
+        <div class="muted" id="timer">--:--</div>
+      </div>
+    </div>
+
+    <div id="result-area" class="card" style="display:none">
+      <div class="result" id="score"></div>
+      <div id="review"></div>
+      <div style="margin-top:12px"><button class="btn" id="restart">Reintentar</button></div>
+    </div>
+
+    <footer class="muted"> EXAMENES&ARTE</footer>
+  </main>
+
+  <script>
+    /* -------------------------
+       BLOQUE DE DATOS (60 preguntas)
+       15 por unidad - respuestas indexadas en `a`
+       ------------------------- */
+    const data = {
+      "Unidad I: Prehistoria": [
+        { q: "Describe las principales características de la vida cotidiana de los humanos durante el Paleolítico.", 
+          choices:[
+            "Cazadores/recolectores, vida nómada, herramientas de piedra, descubrimiento del fuego y arte rupestre; sociedades con organización simple.",
+            "Sedentarismo amplio con agricultura, cerámica, ciudades y mercados permanentes.",
+            "Alta urbanización, escritura y comercio internacional con monedas.",
+            "Sociedades industriales con manufactura mecanizada y división salarial del trabajo."
+          ], a:0},
+
+        { q: "¿Cómo afectó el estilo de vida nómada en la organización social durante el Paleolítico?",
+          choices:[
+            "Condicionó una organización social simple sin jerarquías rígidas, decisiones colectivas y división de tareas según sexo y edad.",
+            "Provocó una fuerte jerarquía monárquica y acumulación de riqueza material.",
+            "Fomentó la creación de grandes estados centralizados y burocracias complejas.",
+            "Incentivó el desarrollo de sistemas de escritura administrativa."
+          ], a:0},
+
+        { q: "¿Qué tipos de representaciones artísticas eran comunes en el Paleolítico y cuál era su posible significado?",
+          choices:[
+            "Pinturas rupestres, grabados y esculturas mobiliarias con carácter mágico-religioso vinculadas a la caza o fertilidad.",
+            "Frescos al óleo sobre lienzo representando escenas cortesanas.",
+            "Arquitectura monumental con cúpulas y columnas decorativas.",
+            "Arte mecánico producido por talleres especializados."
+          ], a:0},
+
+        { q: "¿Qué habilidades del Homo sapiens le permitieron adaptarse a entornos hostiles?",
+          choices:[
+            "Capacidad craneal desarrollada, pensamiento abstracto, planificación y comunicación simbólica mediante lenguaje.",
+            "Dependencia total de recursos encontrados sin innovación tecnológica.",
+            "Ausencia de cooperación social y comportamiento solitario.",
+            "Desarrollo exclusivo de la agricultura desde su origen."
+          ], a:0},
+
+        { q: "¿Qué técnicas y materiales se empleaban en las pinturas rupestres (Anexo Altamira/Lascaux)?",
+          choices:[
+            "Pigmentos naturales (óxidos, carbón), aplicación con dedos, soplado o pinceles rudimentarios, uso del relieve de la roca.",
+            "Óleos y barnices modernos aplicados con paleta y pinceles finos.",
+            "Tinta digital aplicada por procesos mecánicos.",
+            "Pintura acrílica industrial con aerosoles sintéticos."
+          ], a:0},
+
+        { q: "¿Qué representan frecuentemente las pequeñas estatuillas femeninas del Paleolítico (Venus)?",
+          choices:[
+            "Simbolismos de fertilidad, maternidad y abundancia; piezas portátiles entre 4 y 25 cm.",
+            "Representaciones de dioses solares con atributos militares.",
+            "Retratos realistas de gobernantes locales con inscripciones.",
+            "Objetos utilitarios para la agricultura."
+          ], a:0},
+
+        { q: "¿Cuál fue una innovación social clave al final del Pleistoceno que abrió paso al Neolítico?",
+          choices:[
+            "Transición al sedentarismo y al desarrollo de la agricultura por el fin de la última glaciación.",
+            "Invención de la imprenta y alfabetización masiva.",
+            "Desarrollo de la industria textil y la manufactura a gran escala.",
+            "Aparición de la moneda acuñada y bancos."
+          ], a:0},
+
+        { q: "¿Cuál es la función propuesta de Stonehenge según la guía-anexo?",
+          choices:[
+            "Conjunto megalítico con función ritual, astronómica y funeraria, posiblemente para observar solsticios y marcar ciclos agrícolas.",
+            "Antiguo mercado de intercambio y comercio marítimo.",
+            "Palacio real con función administrativa centralizada.",
+            "Fuerte militar de defensa frente a invasiones."
+          ], a:0},
+
+        { q: "¿Qué es un dolmen según los ejemplos del anexo?",
+          choices:[
+            "Conjunto de piedras verticales que sostienen una losa horizontal formando una cámara, usado como tumba colectiva o cámara funeraria.",
+            "Templo piramidal con cámaras internas y cámaras funerarias reales.",
+            "Torre defensiva construida con ladrillo cocido para vigilancia.",
+            "Una residencia palaciega con jardines y patios."
+          ], a:0},
+
+        { q: "¿Qué es un menhir y cuál pudo ser su función?",
+          choices:[
+            "Gran piedra vertical hincada en el suelo con probable función ritual, conmemorativa o de delimitación territorial.",
+            "Pequeña estatuilla femenina asociada a la fertilidad.",
+            "Instalación hidráulica para riego agrícola.",
+            "Instrumento musical litúrgico empleado en cultos."
+          ], a:0},
+
+        { q: "¿Por qué Altamira es emblemática del arte prehistórico?",
+          choices:[
+            "Por su calidad, antigüedad y conservación: pinturas de bisontes y manos con realismo y uso del relieve de la roca.",
+            "Porque fue un centro urbano con grandes palacios y plazas.",
+            "Porque contiene los primeros textos jeroglíficos completos.",
+            "Por ser un taller metalúrgico de la Edad del Bronce."
+          ], a:0},
+
+        { q: "¿Qué evidencias muestran el uso del fuego en el Pleistoceno y su importancia?",
+          choices:[
+            "Refugios más elaborados, ropa de piel, estrategias de caza y cocina, lo que permitió adaptaciones a climas fríos y diversificación humana.",
+            "Producción de cerámica industrial y hornos complejos.",
+            "Cultivo extensivo de cereales y sistemas de riego.",
+            "Fabricación de vidrio y vidrio soplado."
+          ], a:0},
+
+        { q: "¿Qué tipo de arte portátil aparece en el Paleolítico y cuál es su contenido temático?",
+          choices:[
+            "Esculturas mobiliarias en piedra, hueso o marfil (Venus) con énfasis en rasgos de fertilidad y sexualidad femenina.",
+            "Miniaturas arquitectónicas de templos con inscripciones cuneiformes.",
+            "Pequeñas pinturas al óleo firmadas por artistas conocidos.",
+            "Monedas con retratos de gobernantes."
+          ], a:0},
+
+        { q: "¿Qué relación hay entre movilidad nómada y transmisión cultural en el Paleolítico?",
+          choices:[
+            "El nomadismo favoreció la transmisión oral de saberes, cooperación y conocimiento del entorno en ausencia de acumulación material.",
+            "Impuso la escritura como principal medio de transmisión cultural.",
+            "Creó economías fiscales centralizadas y registros administrativos.",
+            "Generó aislamiento total entre grupos sin intercambio cultural."
+          ], a:0},
+
+        { q: "¿Qué características diferencian la tecnología lítica del Paleolítico?",
+          choices:[
+            "Herramientas de piedra tallada (sílex, núcleo y lascas) y uso de hueso y madera para complemento; tecnología manual y simple.",
+            "Herramientas forjadas en hierro y acero con moldes industriales.",
+            "Instrumentos de bronce pulido con decoración vegetal.",
+            "Componentes electrónicos y herramientas eléctricas."
+          ], a:0}
+      ],
+
+      "Unidad II: Antigüedad": [
+        { q: "¿Cómo se define el arte antiguo y por qué es relevante su estudio?", 
+          choices:[
+            "Manifestaciones de Oriente Próximo, Egipto, Grecia, Etruria y Roma que sentaron bases estéticas, técnicas y simbólicas del arte occidental; importante por monumentalidad y relación con religión y poder.",
+            "Arte producido exclusivamente en la Edad Media sin influencias clásicas.",
+            "Corriente puramente decorativa sin contenidos simbólicos ni políticos.",
+            "Movimiento exclusivamente renacentista surgido en el siglo XV."
+          ], a:0},
+
+        { q: "¿De qué manera el arte egipcio funcionaba como vínculo con lo divino?",
+          choices:[
+            "Actuaba como medio religioso y funerario para asegurar inmortalidad y orden cósmico (maat); tumbas y templos con escenas y textos sagrados.",
+            "Era meramente decorativo sin finalidad ritual.",
+            "Servía para comercio exterior y propaganda mercantil.",
+            "Era exclusivo de la esfera doméstica sin relación con religiosidad."
+          ], a:0},
+
+        { q: "¿Qué cambios artísticos se observan entre el Imperio Antiguo, Medio y Nuevo en Egipto?",
+          choices:[
+            "Imperio Antiguo: pirámides y arte funerario monumental; Imperio Medio: mayor humanización escultórica; Imperio Nuevo: esplendor arquitectónico y templos colosales.",
+            "Imperio Antiguo: arte renacentista; Imperio Medio: barroco; Imperio Nuevo: modernismo industrial.",
+            "No existen diferencias significativas entre periodos.",
+            "Imperio Antiguo: uso de óleo; Imperio Nuevo: uso de fotografía."
+          ], a:0},
+
+        { q: "¿Cuáles eran las escrituras predominantes en el Egipto faraónico y sus usos?",
+          choices:[
+            "Jeroglífico (sagrado en monumentos), hierática (uso sacerdotal/administrativo simplificado) y demótica (documentos cotidianos en etapas tardías).",
+            "Alfabeto latino para documentos oficiales desde el inicio.",
+            "Sistema cuneiforme como única escritura usada en templos egipcios.",
+            "Grafitis modernos usados por obreros."
+          ], a:0},
+
+        { q: "¿Qué es el Ka en la cosmovisión egipcia?",
+          choices:[
+            "Elemento espiritual o fuerza vital que debía sobrevivir tras la muerte; por ello tumbas y estatuas funcionaban como morada del Ka.",
+            "Nombre de un faraón de la IV dinastía.",
+            "Técnica de talla en piedra empleada en pirámides.",
+            "Un tipo de jeroglífico usado solo en textos astronómicos."
+          ], a:0},
+
+        { q: "¿Qué define a las pirámides de Guiza y cuál era su función principal?",
+          choices:[
+            "Estructura piramidal con base cuadrada orientada a puntos cardinales, cámaras funerarias; función principal: tumba del faraón y símbolo de ascensión divina.",
+            "Edificios residenciales para la nobleza con jardines interiores.",
+            "Centros comerciales para el intercambio de cereales.",
+            "Fortalezas militares para defensa costera."
+          ], a:0},
+
+        { q: "¿Cómo se representaban a los dioses en el arte egipcio y qué atributos eran comunes?",
+          choices:[
+            "Cuerpos humanos con cabezas de animales (Horus halcón, Anubis chacal, Thot ibis); atributos como el anj (vida), cetro uas (poder) y coronas reales.",
+            "Solo como figuras abstractas geométricas sin atributos identificables.",
+            "Como retratos realistas de campesinos anónimos.",
+            "Representaciones exclusivamente en miniatura sin simbología."
+          ], a:0},
+
+        { q: "¿Qué caracteriza la monumentalidad en el arte egipcio respecto a identidad social?",
+          choices:[
+            "Obras colectivas y duraderas que refuerzan identidad religiosa y unidad bajo el orden divino, simbolizando permanencia y poder del Estado.",
+            "Edificaciones efímeras para festivales agrícolas.",
+            "Pequeñas artesanías sin valor social colectivo.",
+            "Instalaciones temporales dedicadas a la música."
+          ], a:0},
+
+        { q: "¿Cuáles son algunos ejemplos de construcciones romanas destacadas y su función?",
+          choices:[
+            "Foro Romano: centro cívico y religioso; Coliseo (Anfiteatro Flavio): espectáculos públicos y gladiadores; Panteón: templo para todos los dioses.",
+            "Zigurat de Ur: mercado portuario romano.",
+            "Casa romana típica: teatro público con óculos.",
+            "Pirámide de Keops: templo romano de agricultura."
+          ], a:0},
+
+        { q: "¿Qué diferencias esenciales existen entre los órdenes arquitectónicos griegos?",
+          choices:[
+            "Capiteles: Dórico (sobrio y robusto), Jónico (volutas), Corintio (fuerte ornamentación de hojas de acanto).",
+            "No existieron órdenes diferentes en Grecia, todos iguales.",
+            "Ornamentos exclusivamente geométricos sin capiteles.",
+            "Los griegos emplearon únicamente el orden gótico."
+          ], a:0},
+
+        { q: "¿Cuál es la función del Panteón de Roma en su diseño original?",
+          choices:[
+            "Templo dedicado a todos los dioses con cúpula hemisférica y óculo central; expresión de ingeniería y culto plural.",
+            "Mercado cubierto para productos agrícolas y esclavos.",
+            "Residencia imperial privada con jardines cerrados.",
+            "Fuerte militar con torreones y bastiones."
+          ], a:0},
+
+        { q: "¿Cómo influyó la mitología griega en la temática del arte clásico?",
+          choices:[
+            "Proporcionó temas centrales (héroes, dioses) que expresaban valores culturales y sirvieron de modelos estéticos como en el Discóbolo o frisos del Partenón.",
+            "No tuvo influencia; los artistas evitaban narrativas mitológicas.",
+            "Sirvió sólo para decoraciones ornamentales sin significado moral.",
+            "Se limitó únicamente a representaciones vegetales y geométricas."
+          ], a:0},
+
+        { q: "¿Cuál es la relevancia del Discóbolo en el arte griego?",
+          choices:[
+            "Expresa la belleza física y el movimiento idealizado, enfatizando el ideal clásico del cuerpo y el momento conten- to del lanzamiento.",
+            "Es una pieza renacentista que muestra arquitectura doméstica.",
+            "Se trata de un relieve funerario egipcio importado a Grecia.",
+            "Una pintura mural representativa del arte gótico."
+          ], a:0},
+
+        { q: "¿Qué características técnicas permitieron la monumentalidad romana?",
+          choices:[
+            "Uso del arco, bóveda y hormigón (concreto), lo que permitió grandes espacios como anfiteatros y cúpulas duraderas.",
+            "Exclusivo uso de piedra seca sin tecnología de junta.",
+            "Dependencia total de madera sin estructuras permanentes.",
+            "Invención del vidrio estructural como principal material."
+          ], a:0}
+      ],
+
+      "Unidad III: Edad Media y Arte Medieval": [
+        { q: "¿Cómo afectaron las invasiones germánicas al arte de la Península Ibérica?",
+          choices:[
+            "Provocaron sincretismo entre tradiciones romanas, cristianas y bárbaras; desarrollo de orfebrería, motivos geométricos y el arte hispano-visigodo.",
+            "Eliminaron por completo toda tradición romana sin mezcla alguna.",
+            "Introdujeron la pintura al óleo y el barroco de inmediato.",
+            "Fomentaron la aparición de arquitectura moderna industrial."
+          ], a:0},
+
+        { q: "¿Qué impacto tuvo el teocentrismo en el papel del artista medieval?",
+          choices:[
+            "El artista era visto como instrumento divino; las obras eran anónimas y con valor espiritual más que de autoría personal.",
+            "El artista se convirtió en figura pública con derechos de autor modernos.",
+            "El artista era totalmente secular y promovía el individualismo renacentista.",
+            "Los artistas operaban como capitalistas comerciales con talleres mercantiles internacionales."
+          ], a:0},
+
+        { q: "¿Qué caracteriza al arte carolingio en su función política?",
+          choices:[
+            "Renovación cultural impulsada por Carlomagno con códices iluminados, arquitectura basilical y orfebrería para legitimar poder imperial.",
+            "Un arte exclusivamente pagano sin relación con el poder.",
+            "Producción masiva de esculturas ecuestres con propaganda comercial.",
+            "Arte centrado en minucias domésticas sin contenido político."
+          ], a:0},
+
+        { q: "¿Cuál es la función social y pedagógica de las catedrales góticas?",
+          choices:[
+            "Cumplen funciones religiosas, sociales y pedagógicas; sus vitrales y rosetones representaban escenas bíblicas para educar a poblaciones analfabetas.",
+            "Su única función fue militar y defensiva.",
+            "Fueron principalmente mercados y centros de comercio.",
+            "Eran residencias privadas de la nobleza sin acceso público."
+          ], a:0},
+
+        { q: "¿Qué innovación arquitectónica permitió la altura y luminosidad del gótico?",
+          choices:[
+            "La bóveda de crucería y arbotantes que redistribuyeron cargas, permitiendo muros más altos y amplios vitrales.",
+            "El uso de mampostería seca sin soporte estructural.",
+            "La sustitución de piedra por madera como principal material en naves.",
+            "La eliminación de cúpulas para introducir torres cilíndricas."
+          ], a:0},
+
+        { q: "¿Cuál fue el rol del arte hispano-árabe (andalusí) en la Península Ibérica?",
+          choices:[
+            "Introdujo arcos de herradura, yeserías y ornamentación no figurativa; su legado se fusionó con el románico y gótico formando el mudéjar.",
+            "No tuvo influencia alguna en la arquitectura local.",
+            "Sustituyó por completo la tradición cristiana sin hibridación.",
+            "Se limitó únicamente a la producción de cerámica utilitaria sin ornamentación."
+          ], a:0},
+
+        { q: "¿Qué significa feudalismo y cómo condicionó el arte medieval?",
+          choices:[
+            "Sistema político-económico basado en feudos y lealtades; el mecenazgo señorial condicionó la construcción de templos, monasterios y castillos.",
+            "Un estilo artístico caracterizado por el uso de mármol y bronces.",
+            "Una técnica pictórica basada en temple y pan de oro.",
+            "Un movimiento intelectual asociado al Renacimiento."
+          ], a:0},
+
+        { q: "¿Cómo se refleja la relación Iglesia-poder en el arte medieval?",
+          choices:[
+            "El arte legitimaba el poder religioso y secular: reyes financiaban templos y representaciones como Cristo Pantocrátor reforzaban supremacía eclesiástica.",
+            "La Iglesia estaba separada totalmente del poder político y no financiaba arte.",
+            "El arte medieval fue siempre crítico del poder y anticlerical.",
+            "La relación se limitó a encargos de pequeños objetos domésticos."
+          ], a:0},
+
+        { q: "¿Qué efecto tuvo la iconoclastia bizantina en la producción artística?",
+          choices:[
+            "Destrucción de imágenes sagradas y cambio hacia imágenes más simbólicas y rígidas; luego los íconos adquieren carácter normativo tras el triunfo iconódulo.",
+            "Promovió la creación de grandes esculturas monumentales figurativas por toda Bizancio.",
+            "Introdujo la pintura al óleo en templos bizantinos de forma masiva.",
+            "No tuvo impacto artístico ni religioso significativo."
+          ], a:0},
+
+        { q: "¿Qué rol cumplían los vitrales y rosetones en catedrales góticas (ej. Chartres)?",
+          choices:[
+            "Función didáctica y simbólica: representaban escenas bíblicas para educar y la luz coloreada simbolizaba la gracia divina.",
+            "Solo servían como elemento decorativo sin contenido narrativo.",
+            "Eran ventanas utilitarias sin valor simbólico alguno.",
+            "Eran obras portátiles que se movían durante las procesiones."
+          ], a:0},
+
+        { q: "¿Cómo evolucionó el concepto de autoría del románico al gótico?",
+          choices:[
+            "Del anonimato (artista como siervo de Dios) a una mayor individualización donde maestros comienzan a firmar obras, preludio del Renacimiento.",
+            "Los artistas siempre fueron figuras autoriales iguales a las del Alto Renacimiento.",
+            "No hubo cambio: la firma nunca apareció hasta el siglo XX.",
+            "La autoría dejó de existir por completo con el gótico."
+          ], a:0},
+
+        { q: "¿Qué elementos formales caracterizan la planta basilical con transepto?",
+          choices:[
+            "Nave central amplia, naves laterales, transepto que forma la cruz latina, ábside y girola para la circulación de peregrinos.",
+            "Planta circular sin naves ni capillas laterales.",
+            "Estructura vertical de sólo una sala sin división en naves.",
+            "Un complejo de palacios residenciales sin función religiosa."
+          ], a:0},
+
+        { q: "¿Qué función social cumplían las catedrales además de la religiosa?",
+          choices:[
+            "Eran centros comunitarios y pedagógicos, además de lugares de culto y peregrinación.",
+            "Servían únicamente como mercados y almacenes comerciales.",
+            "Eran centros militares cerrados al público.",
+            "Fueron utilizados exclusivamente como hospitales en la Edad Media."
+          ], a:0},
+
+        { q: "¿Qué papel tuvieron las miniaturas y códices en el arte carolingio?",
+          choices:[
+            "Forma de renovatio cultural que legitimaba el poder imperial mediante códices iluminados y orfebrería destinada a reforzar la autoridad de Carlomagno.",
+            "Fueron meras cuentas fiscales sin valor artístico.",
+            "Se limitaron a la producción de mapas náuticos para comercio atlántico.",
+            "Eran piezas industriales destinadas al intercambio con Asia."
+          ], a:0}
+      ],
+
+      "Unidad IV: Renacimiento y posteriores": [
+        { q: "¿Cuál fue la influencia del Renacimiento en la transición del pensamiento medieval al moderno?",
+          choices:[
+            "Promovió el antropocentrismo y el humanismo: exaltación del ser humano, recuperación de modelos grecolatinos, razón, proporción y observación científica.",
+            "Reforzó el teocentrismo y la exclusividad medieval sin cambios.",
+            "Retrotrajo a sociedades puramente mitológicas sin base racional.",
+            "Impulsó la adopción inmediata de la industria mecanizada."
+          ], a:0},
+
+        { q: "¿Qué papel tuvieron los mecenas en el desarrollo del Renacimiento?",
+          choices:[
+            "Patrocinadores (ej. Médici) que financiaron artistas y talleres, permitiendo profesionalización, expansión y reconocimiento social del artista.",
+            "Fueron exclusivamente críticos de arte que escribían catálogos públicos.",
+            "Los mecenas destruyeron la actividad artística para centralizarla en el Estado.",
+            "No existieron mecenas; todo arte fue de origen popular."
+          ], a:0},
+
+        { q: "¿Qué diferencia existe entre Quattrocento y Cinquecento?",
+          choices:[
+            "Quattrocento (siglo XV): experimentación con perspectiva y proporción; Cinquecento (siglo XVI): madurez técnica y síntesis ideal de perfección monumental.",
+            "Quattrocento y Cinquecento son términos sin relación histórica.",
+            "Quattrocento corresponde al Barroco y Cinquecento a la Edad Media.",
+            "Ambos se refieren a corrientes exclusivamente renacentistas del siglo XVIII."
+          ], a:0},
+
+        { q: "¿Qué significa Humanismo en el contexto renacentista?",
+          choices:[
+            "Exaltación del ser humano como medida de todas las cosas; unión de arte, ciencia y filosofía centrada en la razón y la proporción.",
+            "La subordinación del ser humano a la divinidad sin autonomía.",
+            "Un movimiento literario del siglo XIX sin implicaciones artísticas.",
+            "Una técnica pictórica que utiliza oro en pan."
+          ], a:0},
+
+        { q: "¿Qué papel ejemplifica Leonardo da Vinci respecto a la relación arte-ciencia?",
+          choices:[
+            "Integró estudios anatómicos, óptica e ingeniería en su arte (El hombre de Vitruvio), mostrando observación empírica y conocimiento científico aplicado al dibujo.",
+            "Fue únicamente un escultor que rehuyó la ciencia.",
+            "Su obra está desligada de cualquier estudio anatómico o científico.",
+            "Leonardo fue un arquitecto que no pintó nunca."
+          ], a:0},
+
+        { q: "¿Qué obra realizó Miguel Ángel que ilustra la monumentalidad del Cinquecento?",
+          choices:[
+            "El David y pinturas de la Capilla Sixtina (Creación de Adán, Juicio Final), ejemplificando fuerza espiritual y dominio técnico.",
+            "La Escuela de Atenas, que es obra de Botticelli.",
+            "El Nacimiento de Venus, obra de Rafael.",
+            "Las puertas del Paraíso, obra de Leonardo."
+          ], a:0},
+
+        { q: "¿Quién pintó 'El Nacimiento de Venus' y en qué contexto surgió?",
+          choices:[
+            "Sandro Botticelli, Quattrocento en Florencia, patrocinado por la familia Médici; obra ligada al humanismo y recuperación de mitos clásicos.",
+            "Miguel Ángel, encargado por la corte papal romana en el Cinquecento.",
+            "Rafael, como obra manierista de corte español.",
+            "Tiziano, realizada en Venecia como fresco mural."
+          ], a:0},
+
+        { q: "¿Qué diferencia técnica existe entre la pintura veneciana y la florentina?",
+          choices:[
+            "Veneciana privilegia el color, atmósfera y óleo sobre lienzo; Florentina enfatiza dibujo, composición y uso de témpera/fresco con enfoque en línea y perspectiva.",
+            "No hay diferencias técnicas; ambas son idénticas en todo aspecto.",
+            "Veneciana usa solo acuarela y la florentina solo muralismo moderno.",
+            "La florentina es exclusivamente escultórica sin pintura."
+          ], a:0},
+
+        { q: "¿Qué aportó Brunelleschi a la arquitectura renacentista?",
+          choices:[
+            "Diseñó la cúpula de Santa María del Fiore en Florencia aplicando principios matemáticos y perspectiva, retomando modelos clásicos para la claridad estructural.",
+            "Inventó la bóveda de crucería gótica para catedrales.",
+            "Construyó pirámides idénticas a las de Egipto en Italia.",
+            "Fue un orfebre sin participación arquitectónica."
+          ], a:0},
+
+        { q: "¿Qué define al manierismo en contraste con el Alto Renacimiento?",
+          choices:[
+            "Respuesta subjetiva a la perfección renacentista: tensión emocional, distorsión de proporciones y búsqueda de expresividad artificial.",
+            "Retorno absoluto a reglas clásicas sin innovación alguna.",
+            "Fuerte apego a naturalismo fotográfico y precisión científica.",
+            "Movimiento exclusivamente dedicado a la producción cerámica."
+          ], a:0},
+
+        { q: "¿Cómo afectó la Reforma protestante al arte renacentista?",
+          choices:[
+            "Provocó secularización en países protestantes (más retratos, paisajes, temas cotidianos) y reacción católica que llevó a la Contrarreforma con arte emotivo y didáctico.",
+            "Impulsó la importación de arte islámico sin cambios locales.",
+            "Eliminó totalmente la producción artística en Europa.",
+            "Sustituyó la pintura por la música como principal forma artística."
+          ], a:0},
+
+        { q: "¿Qué efectos tuvo el mecenazgo en la profesionalización del artista renacentista?",
+          choices:[
+            "Financiación permitió expansión de talleres, formación de artistas como intelectuales y reconocimiento social del creador como profesional.",
+            "Impedía la formación de talleres y limitaba la movilidad artística.",
+            "El mecenazgo desapareció al inicio del Renacimiento.",
+            "Solo benefició a comerciantes y no a artistas."
+          ], a:0},
+
+        { q: "¿Qué impacto tuvieron los descubrimientos geográficos en la iconografía renacentista?",
+          choices:[
+            "Ampliaron la representación de paisajes y especies exóticas, incorporando nuevas referencias iconográficas y estimulación de observación empírica.",
+            "No tuvieron impacto alguno; la iconografía se mantuvo inmutable.",
+            "Fueron reemplazados por imágenes exclusivamente mitológicas sin referencia al mundo real.",
+            "Transformaron la pintura en arquitectura exclusivamente."
+          ], a:0},
+
+        { q: "¿Cómo redefinieron Leonardo, Miguel Ángel y Rafael la percepción del ser humano?",
+          choices:[
+            "Leonardo: proporción y conocimiento; Miguel Ángel: fuerza espiritual y corporal; Rafael: armonía y serenidad; juntos redefinieron al humano como símbolo de perfección y trascendencia.",
+            "Todos promovieron la abstracción total sin referencia humana.",
+            "Promovieron únicamente temas religiosos sin interés por la anatomía.",
+            "Concibieron al ser humano como figura inferior respecto a los dioses."
+          ], a:0}
+      ]
+    };
+
+    // app state
+    let selectedUnit = null; let currentIndex = 0; let answers = [];
+
+    const unitsEl = document.getElementById('units');
+    const unitTitle = document.getElementById('unit-title');
+    const examArea = document.getElementById('exam-area');
+    const questionText = document.getElementById('question-text');
+    const choicesEl = document.getElementById('choices');
+    const qnum = document.getElementById('qnum');
+    const prog = document.getElementById('prog');
+    const qcount = document.getElementById('qcount');
+    const resultArea = document.getElementById('result-area');
+    const scoreEl = document.getElementById('score');
+    const reviewEl = document.getElementById('review');
+
+    // render unit buttons
+    Object.keys(data).forEach((k, i)=>{
+      const btn = document.createElement('button'); btn.className='unit-btn';
+      btn.innerHTML=`<div><strong>${k}</strong><div class="muted">${data[k].length} preguntas</div></div><div>Iniciar</div>`;
+      btn.onclick = ()=> startUnit(k);
+      unitsEl.appendChild(btn);
+    });
+
+    function startUnit(unit){
+      selectedUnit = unit; currentIndex = 0; answers = Array(data[unit].length).fill(null);
+      unitTitle.textContent = unit; qcount.textContent = `${data[unit].length} preguntas`;
+      examArea.style.display='flex'; resultArea.style.display='none';
+      renderQuestion(); updateProgress();
+      // reset scroll
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    function renderQuestion(){
+      const Q = data[selectedUnit][currentIndex];
+      qnum.textContent = `Pregunta ${currentIndex+1} de ${data[selectedUnit].length}`;
+      questionText.textContent = Q.q;
+      choicesEl.innerHTML='';
+      Q.choices.forEach((c, idx)=>{
+        const d = document.createElement('div'); d.className='choice'; d.tabIndex=0;
+        const label = String.fromCharCode(65+idx);
+        d.innerHTML = `<div style="width:22px;height:22px;border-radius:6px;border:2px solid rgba(255,255,255,0.08);display:inline-block;margin-right:10px;text-align:center;line-height:18px;font-weight:700">${label}</div>
+                       <div><strong>${label})</strong> <small>${c}</small></div>`;
+        if(answers[currentIndex]===idx) d.classList.add('selected');
+        d.onclick = ()=>{ answers[currentIndex]=idx; document.querySelectorAll('.choice').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); updateProgress(); };
+        d.onkeyup = (e)=>{ if(e.key==='Enter') d.click(); };
+        choicesEl.appendChild(d);
+      });
+    }
+
+    document.getElementById('next').onclick = ()=>{
+      if(!selectedUnit) return;
+      if(currentIndex < data[selectedUnit].length-1){ currentIndex++; renderQuestion(); }
+    };
+    document.getElementById('prev').onclick = ()=>{
+      if(!selectedUnit) return;
+      if(currentIndex > 0){ currentIndex--; renderQuestion(); }
+    };
+
+    function updateProgress(){
+      if(!selectedUnit) return;
+      const total = data[selectedUnit].length; const answered = answers.filter(a=>a!==null).length;
+      prog.style.width = `${Math.round((answered/total)*100)}%`;
+    }
+
+    document.getElementById('submit').onclick = ()=>{
+      if(!selectedUnit) return;
+      const unanswered = answers.filter(a=>a===null).length;
+      if(unanswered>0){ if(!confirm(`Quedan ${unanswered} preguntas sin responder. ¿Querés entregar igual?`)) return; }
+      grade();
+    }
+
+    function grade(){
+      const arr = data[selectedUnit]; let correct=0;
+      reviewEl.innerHTML = '';
+      arr.forEach((item, i)=>{
+        const isCorrect = answers[i]===item.a; if(isCorrect) correct++;
+        const div = document.createElement('div'); div.style.marginTop='12px'; div.style.padding='10px'; div.style.borderRadius='10px';
+        div.style.background = isCorrect ? 'linear-gradient(90deg, rgba(6,182,212,0.06), rgba(139,92,246,0.04))' : 'linear-gradient(90deg, rgba(246,92,92,0.04), rgba(255,255,255,0.01))';
+        const your = item.choices[answers[i]] ?? '—';
+        div.innerHTML = `<strong>Q${i+1}:</strong> ${item.q} <br><strong>Tu respuesta:</strong> <em>${your}</em> <br><strong>Correcta:</strong> <em>${item.choices[item.a]}</em>`;
+        reviewEl.appendChild(div);
+      });
+      scoreEl.textContent = `Resultado: ${correct} / ${arr.length} (${Math.round(correct/arr.length*100)}%)`;
+      examArea.style.display='none'; resultArea.style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    document.getElementById('restart').onclick = ()=>{ startUnit(selectedUnit); }
+
+    // small-screen helper: add unit selector at top if sidebar hidden
+    (function addMobileSelector(){
+      if(window.innerWidth <= 1000){
+        const sel = document.createElement('select'); sel.style.width='100%'; sel.style.marginBottom='12px';
+        const defaultOpt = document.createElement('option'); defaultOpt.text='-- Selecciona unidad --'; defaultOpt.value='';
+        sel.appendChild(defaultOpt);
+        Object.keys(data).forEach(k=>{
+          const o = document.createElement('option'); o.value=k; o.text=k; sel.appendChild(o);
+        });
+        sel.onchange = ()=>{ if(sel.value) startUnit(sel.value); };
+        document.querySelector('.content').insertBefore(sel, document.querySelector('.card'));
+      }
+    })();
+  </script>
+</body>
+</html>

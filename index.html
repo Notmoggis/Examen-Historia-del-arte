@@ -39,6 +39,9 @@
     @media (max-width:1000px){
       .sidebar{display:none} .content{padding:16px}
     }
+    /* extras para que quede más parecido al original largo */
+    .unit-meta{font-size:13px;opacity:0.85;margin-top:6px}
+    .small-muted{font-size:12px;opacity:0.75}
   </style>
 </head>
 <body>
@@ -46,7 +49,7 @@
     <div class="brand"><div class="logo">HA</div>Guía - Exámenes</div>
     <p class="muted">Selecciona una unidad para comenzar su examen. Preguntas basadas literalmente en la GUÍA-HA.pdf (convertidas a opción múltiple explicativa).</p>
     <div class="units" id="units"></div>
-    <div style="margin-top:18px" class="muted"></div>
+    <div style="margin-top:18px" class="muted small-muted">Buena suerte — lee con calma y revisa al final.</div>
   </aside>
   <main class="content">
     <div class="card">
@@ -82,8 +85,7 @@
 
   <script>
     /* -------------------------
-       BLOQUE DE DATOS (60 preguntas)
-       15 por unidad - respuestas indexadas en `a`
+       BLOQUE DE DATOS (completo)
        ------------------------- */
     const data = {
       "Unidad I: Prehistoria": [
